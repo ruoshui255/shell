@@ -1,10 +1,14 @@
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <sys/types.h>
+
 #include "wrapper.h"
 #include "parse.h"
-#include <stdio.h>
 
 static void
 unix_error(char* msg) {
-    fprintf(stderr, "%s : %s\n", msg, strerror(errno));
+    log_info("%s : %s\n", msg, strerror(errno));
     exit(-1);
 }
 
@@ -43,8 +47,7 @@ Close(int fd) {
 
 int 
 Open(const char* pathname, int flags) {
-    fprintf(stderr, "flags %d\n", flags);
-    int fd = open(pathname, flags);
+    int fd = open(pathname, flags, S_IRWXU);
     if (fd < 0) {
         fprintf(stderr, "open (%s) error : %s\n", pathname, strerror(errno));
         exit(-1);
@@ -67,8 +70,18 @@ void
 Execvp(const char *file, char *const argv[]) {
     int ret = execvp(file, argv);
     if (ret < 0) {
-        fprintf(stderr, "execvp %s error : %s\n", file, strerror(errno));
+        log_info("execvp %s error : %s\n", file, strerror(errno));
     }
+}
+
+int
+Kill(pid_t pid, int sig) {
+    int res = kill(pid, sig);
+    if (res < 0) {
+        unix_error("kill error");
+    }
+    
+    return res;
 }
 
 

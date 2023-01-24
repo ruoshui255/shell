@@ -82,7 +82,7 @@ parse_redirs(struct cmd* cmd) {
         case '>': 
             cmd = allocate_mem_cmd_redir(cmd, file, O_WRONLY|O_CREAT|O_TRUNC, 1);
             break;
-        case '+': cmd = allocate_mem_cmd_redir(cmd, file, O_WRONLY|O_CREAT, 1);break;
+        case '+': cmd = allocate_mem_cmd_redir(cmd, file, O_WRONLY|O_CREAT| O_APPEND, 1);break;
         }
     }
     return cmd;

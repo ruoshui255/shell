@@ -102,7 +102,7 @@ job_add(pid_t pid, enum jobs_state  state, char* cmdline) {
             jobs[i].state = state;
             jobs[i].jid = next_jid++;
             strcpy(jobs[i].cmdline, cmdline);
-            // printf("Added job [%d] %d %s\n", jobs[i].jid, jobs[i].pid, jobs[i].cmdline);
+            // log_info("Added job [%d] %d %s\n", jobs[i].jid, jobs[i].pid, jobs[i].cmdline);
             return;
         }
     }
@@ -150,26 +150,31 @@ builtins_handler get_builtin(char* args[]) {
 
 static int 
 do_bg(char* args[]) {
+    if (args[1] == NULL) {
+        log_info("Usage:bg %%job_id\n");
+        return 0;
+    }
+    
     if (args[1][0] != '%') {
-        printf("<%s> format error\n", args[1]);
-        printf("Usage:bg %%job_id\n");
+        log_info("<%s> format error\n", args[1]);
+        log_info("Usage:bg %%job_id\n");
         return 0;
     }
 
     int pid = atoi(&(args[1][1]));
     if (pid == 0) {
-        printf("Usage:bg %%job_id\n");
+        log_info("Usage:bg %%job_id\n");
     }
     
     struct job_t* p = get_job_by_pid(pid);
     if (p == NULL || p->state == job_undef) {
-        printf("(%d): No such process\n", pid);
+        log_info("(%d): No such process\n", pid);
         return 0;
     }
     
-    printf("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
+    log_info("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
     p->state = job_bg;
-    kill(-p->pid, SIGCONT);
+    Kill(-p->pid, SIGCONT);
     return 0;
 }
 
@@ -178,15 +183,15 @@ do_jobs(char* args[]) {
     for (int i = 0; i < maxjobs; i++) {
         struct job_t* p = &(jobs[i]);
         if (p->state != job_undef) {
-            printf("[%d] (%d) ", p->jid, p->pid);
+            log_info("[%d] (%d) ", p->jid, p->pid);
             switch (p->state) {
-            case job_bg: printf("Running"); break;
-            case job_fg: printf("Foreground "); break;
-            case job_st: printf("Stopped "); break;
-            default: printf("error ");break;
+            case job_bg: log_info("Running"); break;
+            case job_fg: log_info("Foreground "); break;
+            case job_st: log_info("Stopped "); break;
+            default: log_info("error ");break;
             }
         
-            printf("%s \n", p->cmdline);
+            log_info("%s \n", p->cmdline);
         }
     }
     return 0;
@@ -194,26 +199,31 @@ do_jobs(char* args[]) {
 
 static int 
 do_fg(char* args[]) {
+    if (args[1] == NULL) {
+        log_info("Usage:fg %%job_id\n");
+        return 0;
+    }
+
     if (args[1][0] != '%') {
-        printf("<%s> format error\n", args[1]);
-        printf("Usage:fg %%job_id\n");
+        log_info("<%s> format error\n", args[1]);
+        log_info("Usage:fg %%job_id\n");
         return 0;
     }
 
     int pid = atoi(&(args[1][1]));
     if (pid == 0) {
-        printf("Usage:fg %%job_id\n");
+        log_info("Usage:fg %%job_id\n");
     }
     
     struct job_t* p = get_job_by_pid(pid);
     if (p == NULL || p->state == job_undef) {
-        printf("(%d): No such process\n", pid);
+        log_info("(%d): No such process\n", pid);
         return 0;
     }
     
-    printf("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
+    log_info("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
     p->state = job_fg;
-    kill(-p->pid, SIGCONT);
+    Kill(-p->pid, SIGCONT);
     waitfg(pid);    
     return 0;
 }
@@ -230,7 +240,7 @@ do_cd(char* args[]) {
 
 static int 
 do_exit(char **args) {
-    printf("exit shell\n");
+    log_info("exit shell\n");
     exit(EXIT_SUCCESS);
     return 0;
 }
@@ -244,17 +254,17 @@ sigchld_handler(int sig) {
     while((child_pid = waitpid(-1, &wstatus, WNOHANG | WUNTRACED)) > 0){
         if (WIFEXITED(wstatus)) {
             // normally exit
-            // printf("normally exit: delete job\n");
+            // log_info("normally exit: delete job\n");
             job_delete_by_pid(child_pid);
         } else if (WIFSTOPPED(wstatus)) {
             // stop
             struct job_t * job_p = get_job_by_pid(child_pid);
-            printf("Job [%d] (%d) stopped by signal %d\n", job_p->jid, job_p->pid, SIGTSTP);
+            log_info("Job [%d] (%d) stopped by signal %d\n", job_p->jid, job_p->pid, SIGTSTP);
             job_p->state = job_st;
         } else if (WIFSIGNALED(wstatus)) {
             // killed by signal
             struct job_t* job_p = get_job_by_pid(child_pid);
-            printf("Job [%d] (%d) terminated by signal %d\n", job_p->jid, job_p->pid, SIGINT);
+            log_info("Job [%d] (%d) terminated by signal %d\n", job_p->jid, job_p->pid, SIGINT);
 
             job_delete_by_pid(child_pid);
         }
@@ -268,10 +278,12 @@ void
 sigint_handler(int sig) {
     pid_t fore_pid = fgpid();
     if (fore_pid == 0) {
+        log_info("\n$ ");
+        fflush(stdout);
         return;
     }
 
-    kill(-fore_pid, sig);
+    Kill(-fore_pid, sig);
     return;
 }
 
@@ -282,7 +294,7 @@ sigtstp_handler(int sig) {
         return;
     }
 
-    kill(-fore_pid, sig);
+    Kill(-fore_pid, sig);
     return;
 }
 

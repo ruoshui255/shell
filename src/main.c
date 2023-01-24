@@ -12,7 +12,7 @@ void print_cmd(struct cmd* cmd);
 
 int
 getcmd(char *buf, int nbuf) {
-    fprintf(stderr, "$ ");
+    log_info("$ ");
     fflush(stderr);
     memset(buf, 0, nbuf);
     
@@ -39,7 +39,7 @@ cmd_run(struct cmd *cmd) {
     if (cmd == 0)
         exit(1);
 
-    print_cmd(cmd);
+    // print_cmd(cmd);
     switch (cmd->type) {
     default:
       panic("runcmd");
@@ -154,7 +154,7 @@ main(int argc, char const *argv[]) {
         sigprocmask(SIG_SETMASK, &prev , NULL);
         
         if (state == job_bg) {
-            printf("bg (%d) %s\n", pid, buf);
+            log_info("bg (%d) %s\n", pid, buf);
         } else {
             waitfg(pid);
         }
