@@ -1,14 +1,18 @@
-#include "wrapper.h"
-#include "parse.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <sys/select.h>
 #include <sys/types.h>
 
 #include "cmd_builtins.h"
+#include "wrapper.h"
+#include "parse.h"
 
 struct cmd* cmd_parse(char* buf);
 void print_cmd(struct cmd* cmd);
 
+// gloabl variable
+bool parse_error = false;
+struct cmd* objects;
 
 int
 getcmd(char *buf, int nbuf) {
@@ -28,7 +32,7 @@ getcmd(char *buf, int nbuf) {
 
 // Execute cmd.  Never returns.
 void
-cmd_run(struct cmd *cmd) {
+run_cmd(struct cmd *cmd) {
     int p[2];
     struct cmd_back *bcmd;
     struct cmd_exec *ecmd;
@@ -55,15 +59,15 @@ cmd_run(struct cmd *cmd) {
       rcmd = (struct cmd_redir *)cmd;
       Close(rcmd->fd);
       Open(rcmd->file, rcmd->mode);
-      cmd_run(rcmd->cmd);
+      run_cmd(rcmd->cmd);
       break;
 
     case cmdtype_list:
         lcmd = (struct cmd_list *)cmd;
         if (Fork() == 0)
-            cmd_run(lcmd->left);
+            run_cmd(lcmd->left);
         Wait(0);
-        cmd_run(lcmd->right);
+        run_cmd(lcmd->right);
       break;
 
     case cmdtype_pipe:
@@ -75,14 +79,14 @@ cmd_run(struct cmd *cmd) {
         Dup(p[1]);
         Close(p[0]);
         Close(p[1]);
-        cmd_run(pcmd->left);
+        run_cmd(pcmd->left);
       }
       if (Fork() == 0) {
         Close(0);
         Dup(p[0]);
         Close(p[0]);
         Close(p[1]);
-        cmd_run(pcmd->right);
+        run_cmd(pcmd->right);
       }
       Close(p[0]);
       Close(p[1]);
@@ -93,16 +97,19 @@ cmd_run(struct cmd *cmd) {
     case cmdtype_back:
       bcmd = (struct cmd_back *)cmd;
       // if(Fork() == 0)
-      cmd_run(bcmd->cmd);
+      run_cmd(bcmd->cmd);
       break;
     }
     exit(0);
 }
 
+
 void
 init() {
     init_signal();
     init_jobs();
+
+    objects->next = NULL;
 }
 
 int 
@@ -118,6 +125,10 @@ main(int argc, char const *argv[]) {
     while((getcmd(buf, sizeof(buf))) >= 0){
         
         struct cmd* cmd = cmd_parse(buf);
+        if (parse_error) {
+            parse_error = false;
+            continue;
+        }
 
         // builtin method
         if (cmd->type == cmdtype_exec) {
@@ -145,7 +156,7 @@ main(int argc, char const *argv[]) {
             sigprocmask(SIG_SETMASK, &prev , NULL);
             setpgid(0, 0);        
 
-            cmd_run(cmd);
+            run_cmd(cmd);
             exit(-1);
         }
 

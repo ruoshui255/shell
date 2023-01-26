@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -5,41 +6,51 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-
 #include "parse.h"
+
+extern struct cmd* objects;
+
+#define ALLOCATE_OBJ(type, cmdtype) \
+    (type*)allocateObject(sizeof(type), cmdtype)
+
+
+struct cmd*
+allocateObject(size_t size, cmdtype type) {
+    struct cmd* cmd = (struct cmd*)malloc(size);
+    memset(cmd, 0, size);
+
+    cmd->type = type;
+    cmd->next = objects->next;
+    objects->next = cmd;
+
+    return cmd;
+}
 
 struct cmd*
 allocate_mem_cmd_exec(void) {
     struct cmd_exec* cmd;
+    cmd = ALLOCATE_OBJ(struct cmd_exec, cmdtype_exec);
 
-    cmd = (struct cmd_exec*)malloc(sizeof(struct cmd_exec));
-    memset(cmd, 0, sizeof(struct cmd_exec));
-    cmd->type = cmdtype_exec;
     return (struct cmd*)cmd; 
 }
 
 struct cmd*
 allocate_mem_cmd_redir(struct cmd* subcmd, char* file, int mode, int fd) {
     struct cmd_redir* cmd;
-    
-    cmd = (struct cmd_redir*)malloc(sizeof(struct cmd_redir));
-    memset(cmd, 0, sizeof(struct cmd_redir));
-    cmd->type = cmdtype_redir;
+    cmd = ALLOCATE_OBJ(struct cmd_redir, cmdtype_redir);
+
     cmd->cmd = subcmd;
     cmd->file = file;
     cmd->mode = mode;
     cmd->fd = fd;
-    return (struct cmd*)cmd;
+    return (struct cmd*)cmd; 
 }
-
 
 struct cmd*
 allocate_mem_cmd_pipe(struct cmd* left, struct cmd* right) {
     struct cmd_pipe* cmd;
+    cmd = ALLOCATE_OBJ(struct cmd_pipe, cmdtype_pipe);
     
-    cmd = (struct cmd_pipe*)malloc(sizeof(struct cmd_pipe));
-    memset(cmd, 0, sizeof(struct cmd_pipe));
-    cmd->type = cmdtype_pipe;
     cmd->left = left;
     cmd->right = right;
 
@@ -49,11 +60,10 @@ allocate_mem_cmd_pipe(struct cmd* left, struct cmd* right) {
 struct cmd*
 allocate_mem_cmd_back(struct cmd* subcmd) {
     struct cmd_back* cmd;
+    cmd = ALLOCATE_OBJ(struct cmd_back, cmdtype_back);
     
-    cmd = (struct cmd_back*)malloc(sizeof(struct cmd_back));
-    memset(cmd, 0, sizeof(struct cmd_back));
-    cmd->type = cmdtype_back;
     cmd->cmd = subcmd;
+    
     return (struct cmd*)cmd;
 }
 
@@ -61,9 +71,8 @@ struct cmd*
 allocate_mem_cmd_list(struct cmd* left, struct cmd* right) {
     struct cmd_list* cmd;
     
-    cmd = (struct cmd_list*)malloc(sizeof(struct cmd_list));
-    memset(cmd, 0, sizeof(struct cmd_list));
-    cmd->type = cmdtype_list;
+    cmd = ALLOCATE_OBJ(struct cmd_list, cmdtype_list);
+    
     cmd->left = left;
     cmd->right = right;
 
@@ -93,7 +102,7 @@ struct cmd*
 parse_block() {
     scanner_consume('(', "parse block");
     struct cmd* cmd = parse_line();
-    scanner_consume(')', "syntax-missing )");
+    scanner_consume(')', "syntax-missing");
 
     cmd = parse_redirs(cmd);
     return cmd;

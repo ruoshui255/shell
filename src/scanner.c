@@ -3,79 +3,67 @@
 #include <string.h>
 #include <stdbool.h>
 
-void panic(char* msg);
+#include "parse.h"
+#include "scanner.h"
+#include "wrapper.h"
 
 static struct {
-    char* p_start;
-    char* p_current;
-    char* p_end;
+    char* start;
+    char* current;
+    char* end;
     // save the char that modity to '\0' in get_token
     char pre_char;
+    char* pre_s;
+    int line;
 }scanner;
 
 
-static char whitespace[] = " \t\r\n";
-static char symbols[] = "<|>&;()";
-
-
 void 
-scanner_init(char* command) {
-    scanner.p_start = command;
-    scanner.p_current = command;
-    scanner.p_end = command + strlen(command);
-    scanner.pre_char = 0;
+scannerInit(char src[]) {
+    scanner.start = src;
+    scanner.current = src;
+    scanner.end = src + strlen(src);
+    scanner.line = 0;
+    scanner.pre_s = src;
+}
+
+static char
+scannerPeek() {
+    return scanner.current[0];
+}
+
+static char
+scannerAdvance() {
+    scanner.current++;
+    return scanner.current[-1];
 }
 
 static void
-scanner_skip_whitespace() {
-    char* p = scanner.p_current;
-    while (strchr(whitespace, *p)) {
-        p++;
+scannerSkipWhitespace() {
+    for(;;) {
+        char c = scannerPeek();
+        switch (c) {
+            case ' ':
+            case '\t':
+            case '\r':
+                scannerAdvance();
+                break;
+            case '\n':
+                scanner.line++;
+                scannerAdvance();
+                break;
+            default:
+                return;
+        }
     }
-    scanner.p_current = p;
 }
 
 bool
 scanner_has_next() {
-    if (scanner.pre_char != 0 || scanner.p_current < scanner.p_end) {
+    if (scanner.pre_char != 0 || scanner.current < scanner.end) {
         return true;
     }
     return false;
-}
-
-char 
-scanner_next() {
-    if (scanner.pre_char != 0) {
-        char c = scanner.pre_char;
-        scanner.pre_char = 0;
-        return c;
-    }
-
-    scanner_skip_whitespace();
-
-    if (scanner.p_current < scanner.p_end) {
-        char c = *scanner.p_current;
-        scanner.p_current++;
-        return c; 
-    }
-
-    // it can't arrive here;
-    panic("next: it has arrive the end");
-    return 0;
-}
-
-void 
-scanner_consume(char c, char* msg_err) {
-    if (!scanner_has_next()) {
-        panic("consume: it has arrive the end");
-    }
-
-    char t = scanner_next();
-    if (t != c) {
-        fprintf(stderr, "%s: expected [%c] source [%c]\n", msg_err, c, t);
-        exit(-1);
-    }
-    return;
 }
 
 bool
@@ -84,50 +72,123 @@ scanner_peek_equal(char* s){
         return strchr(s, scanner.pre_char);
     }
     
-    scanner_skip_whitespace();
+    scannerSkipWhitespace();
 
     if (scanner_has_next()) {
-        char c = *scanner.p_current;
+        char c = *scanner.current;
         return strchr(s, c);
     }
     return false;
 }
 
+static bool
+scannerAtEnd() {
+    return scanner.current[0] == '\0';
+}
 
-char *
-scanner_get_token(){
-    // cosume symbols
-    if (scanner.pre_char != 0) {
-        scanner.pre_char = 0;
-        return NULL;
-    }
+static Token
+makeToken(TokenType type) {
+    Token token;
+    token.start = scanner.start;
+    token.length = (int)(scanner.current - scanner.start);
+    token.type = type;
+    return token;
+}
 
-    scanner_skip_whitespace();
-   
-   // 处理输入命令行中带有引号: grep "main" ./spin.c
-    char* p = scanner.p_current;
-    if (p < scanner.p_end && *p == '"') {
-        scanner.p_current++;
-        p++;
-    }
-
-    while (p < scanner.p_end && !strchr(whitespace, *p) && !strchr(symbols, *p)) {
-        p++;
+static Token
+makeString() {
+    while (scannerPeek() != '"' && !scannerAtEnd()) {
+        if (scannerPeek() == '\n') {
+            scanner.line++;
+        }
+        scannerAdvance();
     }
     
-    // terminate token: grep "main" ./spin.c
-    if (p[-1] == '"') {
-        p[-1] = '\0';
+    // close the '"'
+    scannerAdvance();
+    return makeToken(TokenTypeArg);
+}
+
+static Token
+errorToken(char *msg){
+    Token token;
+    token.start = msg;
+    token.length = strlen(msg);
+    token.type = TokenTypeError;
+    return token;
+}
+
+static bool
+Argument(char c) {
+    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+    bool digit = '0' <= c && c <= '9';
+
+    return alpha || digit;
+}
+
+static Token
+makeArgument() {
+    while (Argument(scannerPeek()) && scannerPeek() != ' ') {
+        scannerAdvance();
     }
-    
-    // string null terminate
-    if (strchr(symbols, *p)) {
-        scanner.pre_char = *p;        
+
+    return makeToken(TokenTypeArg);
+}
+
+
+Token
+scannerGetToken() {
+    scannerSkipWhitespace();
+    scanner.start = scanner.current;
+
+    if (scannerAtEnd()) {
+        return makeToken(TokenTypeEOF);
     }
-    *p = '\0';
-    p++;
-   
-    char* ret = scanner.p_current;
-    scanner.p_current = p;
-    return ret;
+
+    char c = scannerAdvance();
+    if (Argument(c)) {
+        return makeArgument();
+    }
+
+    switch (c) {
+        case '"': return makeString();
+        case '<': return makeToken(TokenTypeRedirectionRead);
+        case '>': {
+            if (scannerPeek() == '>') {
+                scannerAdvance();
+                return makeToken(TokenTypeRedirectionWriteAppend);
+            } else{
+                return makeToken(TokenTypeRedirectionWrite);
+            }
+        }
+        case '|': return makeToken(TokenTypePipe);
+        case '(': return makeToken(TokenTypeLeftParen);
+        case ')': return makeToken(TokenTypeRightParen);
+        case ';': return makeToken(TokenTypeSemicolon);
+        case '&': {
+            if (scannerPeek() == '&') {
+                scannerAdvance();
+                return makeToken(TokenTypeAnd);
+            } else{
+
+                return makeToken(TokenTypeBackTask);
+            }
+        }
+    }
+    return errorToken("Unexpect character");
+}
+
+
+void 
+scannerConsume(TokenType type, char* msg_err) {
+    if (parse_error) {
+        return;
+    }
+
+    Token t = scannerGetToken();
+    if (t.type != type) {
+        log_info("%s\n", msg_err);
+        parse_error = true;
+    }
+    return;
 }
