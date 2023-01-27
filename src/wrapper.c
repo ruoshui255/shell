@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <signal.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -7,17 +8,17 @@
 #include "parse.h"
 
 static void
-unix_error(char* msg) {
+unixError(char* msg) {
     log_info("%s : %s\n", msg, strerror(errno));
     exit(-1);
 }
 
 pid_t
-Fork() {
+wrapperFork() {
     pid_t pid = fork();
 
     if (pid < 0) {
-        unix_error("fork error");
+        unixError("fork error");
     }
 
     return pid;
@@ -25,10 +26,10 @@ Fork() {
 
 
 int 
-Dup(int fd){
+wrapperDup(int fd){
     int state = dup(fd);
     if (state < 0) {
-        unix_error("dup error");
+        unixError("dup error");
     }
 
     return 0;
@@ -36,17 +37,17 @@ Dup(int fd){
 
 
 void
-Close(int fd) {
+wrapperClose(int fd) {
     int ret = close(fd);
     if (ret < 0) {
-        unix_error("close error");
+        unixError("close error");
     }
 
     return;
 }
 
 int 
-Open(const char* pathname, int flags) {
+wrapperOpen(const char* pathname, int flags) {
     int fd = open(pathname, flags, S_IRWXU);
     if (fd < 0) {
         fprintf(stderr, "open (%s) error : %s\n", pathname, strerror(errno));
@@ -57,42 +58,54 @@ Open(const char* pathname, int flags) {
 }
 
 pid_t
-Wait(int *wstatus) {
+wrapperWait(int *wstatus) {
     pid_t child_term = wait(wstatus);
     if (child_term < 0) {
-        unix_error("wait error");
+        unixError("wait error");
     }
     
     return child_term;
 }
 
 void
-Execvp(const char *file, char *const argv[]) {
+wrapperExecvp(const char *file, char *const argv[]) {
     int ret = execvp(file, argv);
     if (ret < 0) {
         log_info("execvp %s error : %s\n", file, strerror(errno));
+
+        exit(45);
     }
 }
 
 int
-Kill(pid_t pid, int sig) {
+wrapperKill(pid_t pid, int sig) {
     int res = kill(pid, sig);
     if (res < 0) {
-        unix_error("kill error");
+        unixError("kill error");
+    }
+    
+    return res;
+}
+
+void*
+wrapperMalloc(size_t size) {
+    void* res = malloc(size);
+    if (res == NULL) {
+        unixError("kill error");
     }
     
     return res;
 }
 
 
-handler_t 
-*Signal(int signum, handler_t *handler) {
+handler_t *
+wrapperSignal(int signum, handler_t *handler) {
     struct sigaction action, old_action;
 
     action.sa_handler = handler;
     sigemptyset(&action.sa_mask); /* block sigs of type being handled */
     action.sa_flags = SA_RESTART; /* restart syscalls if possible */
 
-    if (sigaction(signum, &action, &old_action) < 0) unix_error("Signal error");
+    if (sigaction(signum, &action, &old_action) < 0) unixError("Signal error");
     return (old_action.sa_handler);
 }

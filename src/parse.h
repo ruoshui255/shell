@@ -6,64 +6,72 @@
 #define MAXARGS 10
 
 typedef enum{
-    cmdtype_exec,
-    cmdtype_redir,
-    cmdtype_pipe,
-    cmdtype_list,
-    cmdtype_back,
-}cmdtype;
+    CmdTypeExec,
+    CmdTypeRedir,
+    CmdTypePipe,
+    CmdTypeList,
+    CmdTypeBack,
+    CmdTypeAnd,
+}CmdType;
 
-struct cmd {
-    struct cmd* next;
-    cmdtype type;
+struct Cmd {
+    struct Cmd* next;
+    CmdType type;
 };
 
-struct cmd_exec {
-    struct cmd* next;
-    cmdtype type;
+struct CmdExec {
+    struct Cmd* next;
+    CmdType type;
     char* argv[MAXARGS];
     char* eargv[MAXARGS];
     int argc;
 };
 
-struct cmd_redir {
-    struct cmd* next;
-    cmdtype type;
-    struct cmd* cmd;
+struct CmdRedir {
+    struct Cmd* next;
+    CmdType type;
+    struct Cmd* cmd;
     char* file;
     char* efile;
     int mode;
     int fd;
 };
 
-struct cmd_pipe {
-    struct cmd* next;
-    cmdtype type;
-    struct cmd* left;
-    struct cmd* right;
+struct CmdPipe {
+    struct Cmd* next;
+    CmdType type;
+    struct Cmd* left;
+    struct Cmd* right;
 };
 
-struct cmd_list {
-    struct cmd* next;
-    cmdtype type;
-    struct cmd* left;
-    struct cmd* right;
+struct CmdList {
+    struct Cmd* next;
+    CmdType type;
+    struct Cmd* left;
+    struct Cmd* right;
 };
 
-struct cmd_back {
-    struct cmd* next;
-    cmdtype type;
-    struct cmd* cmd;
+struct CmdBack {
+    struct Cmd* next;
+    CmdType type;
+    struct Cmd* cmd;
+};
+
+struct CmdAnd {
+    struct Cmd* next;
+    CmdType type;
+    struct Cmd* left;
+    struct Cmd* right;
 };
 
 /* ======== utils ===== */
 void panic(char* msg);
 void print_arr(char* prefix, char* array[], int argc);
-void print_cmd(struct cmd* cmd);
-void print_diff_exit(struct cmd* cmd, char** expected, int argc);
+void print_cmd(struct Cmd* cmd);
+void print_diff_exit(struct Cmd* cmd, char** expected, int argc);
 bool equal_string(char* s, char* d);
 
 /* ======== parse ===== */
-struct cmd* cmdParse(char* buf);
+struct Cmd* cmdParse(char* buf);
 
 #endif

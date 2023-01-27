@@ -174,7 +174,7 @@ do_bg(char* args[]) {
     
     log_info("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
     p->state = JobStateBG;
-    Kill(-p->pid, SIGCONT);
+    wrapperKill(-p->pid, SIGCONT);
     return 0;
 }
 
@@ -223,7 +223,7 @@ do_fg(char* args[]) {
     
     log_info("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
     p->state = JobStateFG;
-    Kill(-p->pid, SIGCONT);
+    wrapperKill(-p->pid, SIGCONT);
     waitFG(pid);    
     return 0;
 }
@@ -283,7 +283,7 @@ handlerSigInt(int sig) {
         return;
     }
 
-    Kill(-fore_pid, sig);
+    wrapperKill(-fore_pid, sig);
     return;
 }
 
@@ -294,15 +294,15 @@ handlerSigStop(int sig) {
         return;
     }
 
-    Kill(-fore_pid, sig);
+    wrapperKill(-fore_pid, sig);
     return;
 }
 
 void
 signalInit() {
-    Signal(SIGINT, handlerSigInt);   
-    Signal(SIGTSTP, handlerSigStop); 
-    Signal(SIGCHLD, handlerSigChild);
+    wrapperSignal(SIGINT, handlerSigInt);   
+    wrapperSignal(SIGTSTP, handlerSigStop); 
+    wrapperSignal(SIGCHLD, handlerSigChild);
 
     // Signal(SIGQUIT, sigquit_handler);
 }

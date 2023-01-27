@@ -15,12 +15,13 @@
 typedef void handler_t(int);
 #define log_info(...) (fprintf(stderr, __VA_ARGS__));
 
-pid_t Fork();
-int Dup(int fd);
-void Close(int fd);
-int Open(const char* pathname, int flags);
-pid_t Wait(int *wstatus);
-void Execvp(const char *file, char *const argv[]);
-int Kill(pid_t pid, int sig);
-handler_t *Signal(int signum, handler_t *handler);
+pid_t wrapperFork();
+int wrapperDup(int fd);
+void wrapperClose(int fd);
+int wrapperOpen(const char* pathname, int flags);
+pid_t wrapperWait(int *wstatus);
+void wrapperExecvp(const char *file, char *const argv[]);
+int wrapperKill(pid_t pid, int sig);
+void *wrapperMalloc(size_t size);
+handler_t *wrapperSignal(int signum, handler_t *handler);
 #endif

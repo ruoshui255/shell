@@ -6,14 +6,14 @@
 
 #define length(x) (sizeof(x)/sizeof(x[0]))
 
-struct cmd* cmdParse(char* buf);
+struct Cmd* cmdParse(char* buf);
 
 
 void
-diff_ecmd(struct cmd* cmd, char** expected, int argc){
-    assert(cmd->type == cmdtype_exec);
+diff_ecmd(struct Cmd* cmd, char** expected, int argc){
+    assert(cmd->type == CmdTypeExec);
     
-    struct cmd_exec* ecmd = (struct cmd_exec*)cmd;
+    struct CmdExec* ecmd = (struct CmdExec*)cmd;
     
     if (ecmd->argc != argc) {
         printf("cmd argc <%d> exp argc <%d>\n", ecmd->argc, argc);
@@ -34,10 +34,10 @@ test1() {
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmdParse(buf);
-    assert(cmd->type == cmdtype_pipe);
+    struct Cmd* cmd = cmdParse(buf);
+    assert(cmd->type == CmdTypePipe);
    
-    struct cmd_pipe* pcmd = (struct cmd_pipe*) cmd;
+    struct CmdPipe* pcmd = (struct CmdPipe*) cmd;
     diff_ecmd(pcmd->left, expected1, length(expected1));
     diff_ecmd(pcmd->right, expected2, length(expected2));
     
@@ -53,10 +53,10 @@ test2() {
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmdParse(buf);
-    assert(cmd->type == cmdtype_pipe);
+    struct Cmd* cmd = cmdParse(buf);
+    assert(cmd->type == CmdTypePipe);
    
-    struct cmd_pipe* pcmd = (struct cmd_pipe*) cmd;
+    struct CmdPipe* pcmd = (struct CmdPipe*) cmd;
     diff_ecmd(pcmd->left, expected1, length(expected1));
     diff_ecmd(pcmd->right, expected2, length(expected2));
     
@@ -71,10 +71,10 @@ test3() {
     char* expected1[] = {"ls", "."};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmdParse(buf);
-    assert(cmd->type == cmdtype_list);
+    struct Cmd* cmd = cmdParse(buf);
+    assert(cmd->type == CmdTypeList);
    
-    struct cmd_list* lcmd = (struct cmd_list*) cmd;
+    struct CmdList* lcmd = (struct CmdList*) cmd;
     diff_ecmd(lcmd->left, expected1, length(expected1));
     // diff_ecmd(lcmd->right, expected2, length(expected2));
     

@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -21,7 +20,7 @@ static struct {
     Token previous;
     Token current;
     bool error;
-    struct cmd* objects;
+    struct Cmd* objects;
 }parser;
 
 /*
@@ -29,7 +28,7 @@ static struct {
 * function signature
 ****************************
 */
-static struct cmd* parse();
+static struct Cmd* parse();
 
 /*
 ****************************
@@ -39,9 +38,9 @@ static struct cmd* parse();
 #define ALLOCATE_OBJ(type, cmdtype) \
     (type*)allocateObject(sizeof(type), cmdtype)
 
-static struct cmd*
-allocateObject(int size, cmdtype type) {
-    struct cmd* cmd = (struct cmd*)malloc(size);
+static struct Cmd*
+allocateObject(int size, CmdType type) {
+    struct Cmd* cmd = (struct Cmd*)wrapperMalloc(size);
     memset(cmd, 0, size);
 
     cmd->type = type;
@@ -51,58 +50,70 @@ allocateObject(int size, cmdtype type) {
     return cmd;
 }
 
-static struct cmd*
+static struct Cmd*
 allocateMemCmdExec(void) {
-    struct cmd_exec* cmd;
-    cmd = ALLOCATE_OBJ(struct cmd_exec, cmdtype_exec);
+    struct CmdExec* cmd;
+    cmd = ALLOCATE_OBJ(struct CmdExec, CmdTypeExec);
 
-    return (struct cmd*)cmd; 
+    return (struct Cmd*)cmd; 
 }
 
-static struct cmd*
-allocateMemCmdRedir(struct cmd* subcmd, char* file, char* efile, int mode, int fd) {
-    struct cmd_redir* cmd;
-    cmd = ALLOCATE_OBJ(struct cmd_redir, cmdtype_redir);
+static struct Cmd*
+allocateMemCmdRedir(struct Cmd* subcmd, char* file, char* efile, int mode, int fd) {
+    struct CmdRedir* cmd;
+    cmd = ALLOCATE_OBJ(struct CmdRedir, CmdTypeRedir);
 
     cmd->cmd = subcmd;
     cmd->file = file;
     cmd->efile = efile;
     cmd->mode = mode;
     cmd->fd = fd;
-    return (struct cmd*)cmd; 
+    return (struct Cmd*)cmd; 
 }
 
-static struct cmd*
-allocateMemCmdPipe(struct cmd* left, struct cmd* right) {
-    struct cmd_pipe* cmd;
-    cmd = ALLOCATE_OBJ(struct cmd_pipe, cmdtype_pipe);
+static struct Cmd*
+allocateMemCmdPipe(struct Cmd* left, struct Cmd* right) {
+    struct CmdPipe* cmd;
+    cmd = ALLOCATE_OBJ(struct CmdPipe, CmdTypePipe);
     
     cmd->left = left;
     cmd->right = right;
 
-    return (struct cmd*)cmd;
+    return (struct Cmd*)cmd;
 }
 
-static struct cmd*
-allocateMemCmdBack(struct cmd* subcmd) {
-    struct cmd_back* cmd;
-    cmd = ALLOCATE_OBJ(struct cmd_back, cmdtype_back);
+static struct Cmd*
+allocateMemCmdBack(struct Cmd* subcmd) {
+    struct CmdBack* cmd;
+    cmd = ALLOCATE_OBJ(struct CmdBack, CmdTypeBack);
     
     cmd->cmd = subcmd;
     
-    return (struct cmd*)cmd;
+    return (struct Cmd*)cmd;
 }
 
-static struct cmd*
-allocateMemCmdList(struct cmd* left, struct cmd* right) {
-    struct cmd_list* cmd;
+static struct Cmd*
+allocateMemCmdList(struct Cmd* left, struct Cmd* right) {
+    struct CmdList* cmd;
     
-    cmd = ALLOCATE_OBJ(struct cmd_list, cmdtype_list);
+    cmd = ALLOCATE_OBJ(struct CmdList, CmdTypeList);
     
     cmd->left = left;
     cmd->right = right;
 
-    return (struct cmd*)cmd;
+    return (struct Cmd*)cmd;
+}
+
+static struct Cmd*
+allocateMemCmdAnd(struct Cmd* left, struct Cmd* right) {
+    struct CmdAnd* cmd;
+    
+    cmd = ALLOCATE_OBJ(struct CmdAnd, CmdTypeAnd);
+    
+    cmd->left = left;
+    cmd->right = right;
+
+    return (struct Cmd*)cmd;
 }
 
 static void
@@ -150,8 +161,8 @@ matchRedir() {
     return redir;
 }
 
-static struct cmd*
-parseRedirs(struct cmd* cmd) {
+static struct Cmd*
+parseRedirs(struct Cmd* cmd) {
     while (matchRedir()) {
         Token t = parser.previous;
         Token file = parser.current;
@@ -174,20 +185,20 @@ parseRedirs(struct cmd* cmd) {
 }
 
 
-struct cmd*
+struct Cmd*
 parseBlock() {
-    struct cmd* cmd = parse();
+    struct Cmd* cmd = parse();
     consume(TokenTypeRightParen, "Expect ')' after block");
 
     cmd = parseRedirs(cmd);
     return cmd;
 }
 
-struct cmd*
+struct Cmd*
 parseExec() {
-    struct cmd_exec* ecmd;
+    struct CmdExec* ecmd;
 
-    ecmd = (struct cmd_exec*)allocateMemCmdExec();
+    ecmd = (struct CmdExec*)allocateMemCmdExec();
     
     if (match(TokenTypeLeftParen)) {
         return parseBlock();
@@ -201,18 +212,18 @@ parseExec() {
         ecmd->eargv[argc] = token.start + token.length;
         argc++;
 
-        ecmd = (struct cmd_exec*)(parseRedirs((struct cmd*)ecmd));
+        ecmd = (struct CmdExec*)(parseRedirs((struct Cmd*)ecmd));
     }
 
     ecmd->argv[argc] = NULL;
     ecmd->argc = argc;
 
-    return (struct cmd*)ecmd;
+    return (struct Cmd*)ecmd;
 }
 
-struct cmd*
+struct Cmd*
 parsePipe() {
-    struct cmd *cmd;
+    struct Cmd *cmd;
     cmd = parseExec();
     if (match(TokenTypePipe)) {
         cmd = allocateMemCmdPipe(cmd, parsePipe());
@@ -221,12 +232,16 @@ parsePipe() {
     return cmd;
 }
 
-static struct cmd*
+static struct Cmd*
 parse() {
-    struct cmd* cmd;
+    struct Cmd* cmd;
     cmd = parsePipe();
     if (match(TokenTypeBackTask)) {
         cmd = allocateMemCmdBack(cmd);
+    }
+
+    if (match(TokenTypeAnd)) {
+        cmd = allocateMemCmdAnd(cmd, parse());
     }
 
     if (match(TokenTypeSemicolon)) {
@@ -238,60 +253,63 @@ parse() {
     }
 
     // doesn't arrive here
+    log_info("parse error: type %d\n", parser.current.type);
     return NULL;
 }
 
 // NUL-terminate all the counted strings.
-static struct cmd* 
-NullTerminate(struct cmd* cmd) {
-  int i;
-  struct cmd_back* bcmd;
-  struct cmd_exec* ecmd;
-  struct cmd_list* lcmd;
-  struct cmd_pipe* pcmd;
-  struct cmd_redir* rcmd;
+static struct Cmd* 
+NullTerminate(struct Cmd* cmd) {
+    int i;
+    struct CmdBack* bcmd;
+    struct CmdExec* ecmd;
+    struct CmdList* lcmd;
+    struct CmdPipe* pcmd;
+    struct CmdRedir* rcmd;
+    struct CmdAnd* acmd;
 
-  if (cmd == NULL) {
-    return NULL;
-  }
+    if (cmd == NULL) {
+        return NULL;
+    }
 
-  switch (cmd->type) {
-    case cmdtype_exec:
-      ecmd = (struct cmd_exec*)cmd;
-      for (i = 0; ecmd->argv[i]; i++){
-       *ecmd->eargv[i] = '\0';
-      }
-      break;
-
-    case cmdtype_redir:
-      rcmd = (struct cmd_redir*)cmd;
-      NullTerminate(rcmd->cmd);
-      *rcmd->efile = '\0';
-      break;
-
-    case cmdtype_pipe:
-      pcmd = (struct cmd_pipe*)cmd;
-      NullTerminate(pcmd->left);
-      NullTerminate(pcmd->right);
-      break;
-
-    case cmdtype_list:
-      lcmd = (struct cmd_list*)cmd;
-      NullTerminate(lcmd->left);
-      NullTerminate(lcmd->right);
-      break;
-
-    case cmdtype_back:
-      bcmd = (struct cmd_back*)cmd;
-      NullTerminate(bcmd->cmd);
-      break;
-  }
-  return cmd;
+    switch (cmd->type) {
+        case CmdTypeExec:
+            ecmd = (struct CmdExec*)cmd;
+            for (i = 0; ecmd->argv[i]; i++){
+                *ecmd->eargv[i] = '\0';
+            }
+            break;
+        case CmdTypeRedir:
+            rcmd = (struct CmdRedir*)cmd;
+            NullTerminate(rcmd->cmd);
+            *rcmd->efile = '\0';
+            break;
+        case CmdTypePipe:
+            pcmd = (struct CmdPipe*)cmd;
+            NullTerminate(pcmd->left);
+            NullTerminate(pcmd->right);
+            break;
+        case CmdTypeList:
+            lcmd = (struct CmdList*)cmd;
+            NullTerminate(lcmd->left);
+            NullTerminate(lcmd->right);
+            break;
+        case CmdTypeBack:
+            bcmd = (struct CmdBack *)cmd;
+            NullTerminate(bcmd->cmd);
+            break;
+        case CmdTypeAnd:
+            acmd = (struct CmdAnd*)cmd;
+            NullTerminate(acmd->left);
+            NullTerminate(acmd->right);
+            break;
+    }
+    return cmd;
 }
 
 static void
 freeObjects() {
-    struct cmd* p = parser.objects;
+    struct Cmd* p = parser.objects;
     while (p != NULL) {
         parser.objects = p->next;
         free(p);
@@ -299,14 +317,14 @@ freeObjects() {
     }
 }
 
-struct cmd*
+struct Cmd*
 cmdParse(char* buf) {
     // init
     scannerInit(buf);
     freeObjects();
     parser.error = false;
 
-    struct cmd *cmd = NULL;
+    struct Cmd *cmd = NULL;
     
     // parse
     advance();

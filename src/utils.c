@@ -23,42 +23,50 @@ print_arr(char* prefix, char* array[], int argc) {
 }
 
 void
-print_cmd(struct cmd* cmd) {
-    struct cmd_back *bcmd;
-    struct cmd_exec *ecmd;
-    struct cmd_list *lcmd;
-    struct cmd_pipe *pcmd;
-    struct cmd_redir *rcmd;
+print_cmd(struct Cmd* cmd) {
+    struct CmdBack *bcmd;
+    struct CmdExec *ecmd;
+    struct CmdList *lcmd;
+    struct CmdPipe *pcmd;
+    struct CmdRedir *rcmd;
+    struct CmdAnd *acmd;
 
     switch (cmd->type) {
-        case cmdtype_exec:{
-            ecmd = (struct cmd_exec*)cmd;
+        case CmdTypeExec:{
+            ecmd = (struct CmdExec*)cmd;
             print_arr("exec:", ecmd->argv, ecmd->argc);
             break;
-        } case cmdtype_pipe:{
-            pcmd = (struct cmd_pipe*)cmd;
+        } case CmdTypePipe:{
+            pcmd = (struct CmdPipe*)cmd;
             log_info("===== pipe left =====\n");
             print_cmd(pcmd->left);
             log_info("===== pipe right =====\n");
             print_cmd(pcmd->right);
             break;
-        } case cmdtype_back:{
+        } case CmdTypeBack:{
             log_info("===== back cmd =====\n");
-            bcmd = (struct cmd_back*)cmd;
+            bcmd = (struct CmdBack*)cmd;
             print_cmd(bcmd->cmd);
             break;
-        } case cmdtype_list: {
-            lcmd = (struct cmd_list*)cmd;
+        } case CmdTypeList: {
+            lcmd = (struct CmdList*)cmd;
             log_info("===== list left =====\n");
             print_cmd(lcmd->left);
             log_info("===== list right =====\n");
             print_cmd(lcmd->right);
             break;
-        } case cmdtype_redir: {
-            rcmd = (struct cmd_redir*)cmd;
+        } case CmdTypeRedir: {
+            rcmd = (struct CmdRedir*)cmd;
             log_info("===== redir cmd =====\n");
             print_cmd(rcmd->cmd);
             log_info("mode: [%d] fd: [%d] file: [%s]\n", rcmd->mode, rcmd->fd, rcmd->file);
+            break;
+        } case CmdTypeAnd: {
+            acmd = (struct CmdAnd*)cmd;
+            log_info("===== and left =====\n");
+            print_cmd(acmd->left);
+            log_info("===== and right =====\n");
+            print_cmd(acmd->right);
             break;
         }
     }
@@ -66,7 +74,7 @@ print_cmd(struct cmd* cmd) {
 }
 
 void
-print_diff_exit(struct cmd* cmd, char** expected, int argc) {
+print_diff_exit(struct Cmd* cmd, char** expected, int argc) {
     log_info("\n=== parse cmd result ===\n");
     print_cmd(cmd);
     log_info("\n=== expect result ===\n");

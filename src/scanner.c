@@ -191,7 +191,7 @@ scannerGetToken() {
             }
         }
     }
-    log_info("Error Token: can't arrive here\n")
+    log_info("token error: can't arrive here\n")
     return errorToken("Unexpect character");
 }
 
