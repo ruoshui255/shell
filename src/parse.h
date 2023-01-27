@@ -1,5 +1,5 @@
-#ifndef PARSE
-#define PARSE
+#ifndef __PARSE
+#define __PARSE
 
 #include <stdbool.h>
 
@@ -64,7 +64,6 @@ void print_diff_exit(struct cmd* cmd, char** expected, int argc);
 bool equal_string(char* s, char* d);
 
 /* ======== parse ===== */
-struct cmd* cmd_parse(char* buf);
-void freeObjects();
+struct cmd* cmdParse(char* buf);
 
 #endif

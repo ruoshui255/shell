@@ -6,7 +6,7 @@
 
 #define length(x) (sizeof(x)/sizeof(x[0]))
 
-struct cmd* cmd_parse(char* buf);
+struct cmd* cmdParse(char* buf);
 
 
 void
@@ -34,7 +34,7 @@ test1() {
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmd_parse(buf);
+    struct cmd* cmd = cmdParse(buf);
     assert(cmd->type == cmdtype_pipe);
    
     struct cmd_pipe* pcmd = (struct cmd_pipe*) cmd;
@@ -53,7 +53,7 @@ test2() {
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmd_parse(buf);
+    struct cmd* cmd = cmdParse(buf);
     assert(cmd->type == cmdtype_pipe);
    
     struct cmd_pipe* pcmd = (struct cmd_pipe*) cmd;
@@ -71,7 +71,7 @@ test3() {
     char* expected1[] = {"ls", "."};
     char* expected2[] = {"grep", "123"};
     
-    struct cmd* cmd = cmd_parse(buf);
+    struct cmd* cmd = cmdParse(buf);
     assert(cmd->type == cmdtype_list);
    
     struct cmd_list* lcmd = (struct cmd_list*) cmd;

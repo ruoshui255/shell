@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/select.h>
 #include <sys/types.h>
 
@@ -7,11 +8,8 @@
 #include "wrapper.h"
 #include "parse.h"
 
-// gloabl variable
-extern struct cmd* cmd_parse(char* buf);
-extern struct cmd* OJBECTS;
 
-int
+static int
 getcmd(char *buf, int nbuf) {
     log_info("$ ");
     fflush(stderr);
@@ -28,7 +26,7 @@ getcmd(char *buf, int nbuf) {
 }
 
 // Execute cmd.  Never returns.
-void
+static void
 run_cmd(struct cmd *cmd) {
     int p[2];
     struct cmd_back *bcmd;
@@ -101,29 +99,23 @@ run_cmd(struct cmd *cmd) {
 }
 
 
-void
+static void
 init() {
-    init_signal();
-    init_jobs();
-
-    OJBECTS->next = NULL;
+    signalInit();
+    jobInit();
 }
 
 int 
 main(int argc, char const *argv[]) {
     init();
-
-    static char buf[100];
+    static char buf[MaxLine];
     int fd;
-
   // Ensure that three file descriptors are Open.
 
   // Read and run input commands.
     while((getcmd(buf, sizeof(buf))) >= 0){
-        
-        struct cmd* cmd = cmd_parse(buf);
-        if (parse_error) {
-            parse_error = false;
+        struct cmd* cmd = cmdParse(buf);
+        if (cmd == NULL) {
             continue;
         }
 
@@ -131,12 +123,7 @@ main(int argc, char const *argv[]) {
         if (cmd->type == cmdtype_exec) {
             struct cmd_exec* ecmd = (struct cmd_exec*) cmd;
 
-            // skip whitespace
-            if (ecmd->argc == 0) {
-                continue;
-            }            
-
-            builtins_handler fun = get_builtin(ecmd->argv);
+            builtins_handler fun = builtinGet(ecmd->argv);
             if (fun) {
                 fun(ecmd->argv);
                 continue;
@@ -157,14 +144,14 @@ main(int argc, char const *argv[]) {
             exit(-1);
         }
 
-        enum jobs_state state = cmd->type == cmdtype_back? job_bg : job_fg;
-        job_add(pid, state, buf);
+        JobState state = cmd->type == cmdtype_back? JobStateBG : JobStateFG;
+        jobAdd(pid, state, buf);
         sigprocmask(SIG_SETMASK, &prev , NULL);
         
-        if (state == job_bg) {
+        if (state == JobStateBG) {
             log_info("bg (%d) %s\n", pid, buf);
         } else {
-            waitfg(pid);
+            waitFG(pid);
         }
     }
     return 0;

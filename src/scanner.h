@@ -30,11 +30,7 @@ typedef struct {
 
 
 /* ======== scannner ===== */
-// bool scanner_has_next();
-// char scanner_next();
 void scannerInit(char command[]);
-// bool scanner_peek_equal(char* s);
 Token scannerGetToken();
-void scannerConsume(TokenType token, char* msg_err);
 
 #endif

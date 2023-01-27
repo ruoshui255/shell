@@ -12,7 +12,6 @@
 * global variable
 ****************************
 */
-extern bool PARSE_ERROR;
 
 static struct {
     char* start;
@@ -136,7 +135,8 @@ errorToken(char *msg){
 
 static bool
 Argument(char c) {
-    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '.';
+    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '.' || c == '/';
+
     bool digit = '0' <= c && c <= '9';
 
     return alpha || digit;
@@ -191,21 +191,7 @@ scannerGetToken() {
             }
         }
     }
-    log_info("Error Token: can't arrive here")
+    log_info("Error Token: can't arrive here\n")
     return errorToken("Unexpect character");
 }
 
-
-void 
-scannerConsume(TokenType type, char* msg_err) {
-    if (PARSE_ERROR) {
-        return;
-    }
-
-    Token t = scannerGetToken();
-    if (t.type != type) {
-        log_info("%s\n", msg_err);
-        PARSE_ERROR = true;
-    }
-    return;
-}

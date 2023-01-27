@@ -4,14 +4,14 @@
 
 typedef int (*builtins_handler)(char * args[]);
 
-enum foo {maxline=128, maxjobs=20};
-enum jobs_state {job_undef, job_bg, job_fg, job_st};
+enum {MaxLine=128, MaxJobs=20};
+typedef enum {JobStateUndefine, JobStateBG, JobStateFG, JobStateStop}JobState;
 
-builtins_handler get_builtin(char* args[]);
+builtins_handler builtinGet(char* args[]);
 
-void init_signal();
-void init_jobs();
-void waitfg(pid_t pid);
-void job_add(pid_t pid, enum jobs_state state, char* cmdline);
+void signalInit();
+void jobInit();
+void waitFG(pid_t pid);
+void jobAdd(pid_t pid, JobState state, char* cmdline);
 
 #endif

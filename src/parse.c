@@ -22,10 +22,7 @@ static struct {
     Token current;
     bool error;
     struct cmd* objects;
-    struct cmd* cmd_current;
-}PARSER;
-
-bool PARSE_ERROR;
+}parser;
 
 /*
 ****************************
@@ -48,8 +45,8 @@ allocateObject(int size, cmdtype type) {
     memset(cmd, 0, size);
 
     cmd->type = type;
-    cmd->next = PARSER.objects;
-    PARSER.objects = cmd;
+    cmd->next = parser.objects;
+    parser.objects = cmd;
 
     return cmd;
 }
@@ -110,10 +107,10 @@ allocateMemCmdList(struct cmd* left, struct cmd* right) {
 
 static void
 advance() {
-    PARSER.previous = PARSER.current;
+    parser.previous = parser.current;
     for (;;) {
-        PARSER.current =  scannerGetToken();
-        if (PARSER.current.type != TokenTypeError) {
+        parser.current =  scannerGetToken();
+        if (parser.current.type != TokenTypeError) {
             break;
         }
     }
@@ -121,7 +118,7 @@ advance() {
 
 static bool
 check(TokenType type) {
-    return PARSER.current.type == type;
+    return parser.current.type == type;
 }
 
 static bool
@@ -134,6 +131,19 @@ match(TokenType type) {
     }
 }
 
+static void 
+consume(TokenType type, char* msg_err) {
+    if (parser.error) {
+        return;
+    }
+
+    Token t = scannerGetToken();
+    if (t.type != type) {
+        log_info("%s\n", msg_err);
+        parser.error = true;
+    }
+    return;
+}
 static bool
 matchRedir() {
     bool redir = match(TokenTypeRedirectionRead) || match(TokenTypeRedirectionWrite) || match(TokenTypeRedirectionWriteAppend);
@@ -143,8 +153,8 @@ matchRedir() {
 static struct cmd*
 parseRedirs(struct cmd* cmd) {
     while (matchRedir()) {
-        Token t = PARSER.previous;
-        Token file = PARSER.current;
+        Token t = parser.previous;
+        Token file = parser.current;
         char* efile = file.start + file.length;
         
         advance();
@@ -167,7 +177,7 @@ parseRedirs(struct cmd* cmd) {
 struct cmd*
 parseBlock() {
     struct cmd* cmd = parse();
-    scannerConsume(TokenTypeRightParen, "Expect ')' after block");
+    consume(TokenTypeRightParen, "Expect ')' after block");
 
     cmd = parseRedirs(cmd);
     return cmd;
@@ -186,7 +196,7 @@ parseExec() {
     int argc = 0;
     while (check(TokenTypeArg)) {
         advance();
-        Token token = PARSER.previous;
+        Token token = parser.previous;
         ecmd->argv[argc] = token.start;
         ecmd->eargv[argc] = token.start + token.length;
         argc++;
@@ -279,28 +289,35 @@ NullTerminate(struct cmd* cmd) {
   return cmd;
 }
 
-struct cmd*
-cmd_parse(char* buf) {
-    scannerInit(buf);
-    
-    advance();
-    if (!match(TokenTypeEOF)) {
-        struct cmd *cmd = parse();
-        NullTerminate(cmd);
-        return cmd;
+static void
+freeObjects() {
+    struct cmd* p = parser.objects;
+    while (p != NULL) {
+        parser.objects = p->next;
+        free(p);
+        p = parser.objects;
     }
-    
-    // struct cmd* cmd = parse_line();
-    // return cmd;
-    return NULL;
 }
 
-void
-freeObjects() {
-    struct cmd* p = PARSER.objects;
-    while (p != NULL) {
-        PARSER.objects = p->next;
-        free(p);
-        p = PARSER.objects;
+struct cmd*
+cmdParse(char* buf) {
+    // init
+    scannerInit(buf);
+    freeObjects();
+    parser.error = false;
+
+    struct cmd *cmd = NULL;
+    
+    // parse
+    advance();
+    if (!match(TokenTypeEOF)) {
+        cmd = parse();
+        if (parser.error) {
+            cmd = NULL;
+        } else {
+            NullTerminate(cmd);
+        }
     }
+
+    return cmd;
 }
