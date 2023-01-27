@@ -7,12 +7,9 @@
 #include "wrapper.h"
 #include "parse.h"
 
-struct cmd* cmd_parse(char* buf);
-void print_cmd(struct cmd* cmd);
-
 // gloabl variable
-bool parse_error = false;
-struct cmd* objects;
+extern struct cmd* cmd_parse(char* buf);
+extern struct cmd* OJBECTS;
 
 int
 getcmd(char *buf, int nbuf) {
@@ -109,7 +106,7 @@ init() {
     init_signal();
     init_jobs();
 
-    objects->next = NULL;
+    OJBECTS->next = NULL;
 }
 
 int 

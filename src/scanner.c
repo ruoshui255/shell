@@ -7,6 +7,13 @@
 #include "scanner.h"
 #include "wrapper.h"
 
+/*
+****************************
+* global variable
+****************************
+*/
+extern bool PARSE_ERROR;
+
 static struct {
     char* start;
     char* current;
@@ -17,7 +24,11 @@ static struct {
     int line;
 }scanner;
 
-
+/*
+****************************
+* function declaration
+****************************
+*/
 void 
 scannerInit(char src[]) {
     scanner.start = src;
@@ -106,7 +117,12 @@ makeString() {
     
     // close the '"'
     scannerAdvance();
-    return makeToken(TokenTypeArg);
+    
+    Token t = makeToken(TokenTypeArg);
+    // remove "
+    t.start++;
+    t.length = t.length - 2;
+    return t;
 }
 
 static Token
@@ -120,7 +136,7 @@ errorToken(char *msg){
 
 static bool
 Argument(char c) {
-    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '.';
     bool digit = '0' <= c && c <= '9';
 
     return alpha || digit;
@@ -175,20 +191,21 @@ scannerGetToken() {
             }
         }
     }
+    log_info("Error Token: can't arrive here")
     return errorToken("Unexpect character");
 }
 
 
 void 
 scannerConsume(TokenType type, char* msg_err) {
-    if (parse_error) {
+    if (PARSE_ERROR) {
         return;
     }
 
     Token t = scannerGetToken();
     if (t.type != type) {
         log_info("%s\n", msg_err);
-        parse_error = true;
+        PARSE_ERROR = true;
     }
     return;
 }

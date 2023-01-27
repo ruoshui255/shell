@@ -2,8 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int i, secs;
 
     if (argc != 2) {

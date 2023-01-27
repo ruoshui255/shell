@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -8,13 +9,16 @@
 struct cmd* cmd_parse(char* buf);
 
 
-
 void
 diff_ecmd(struct cmd* cmd, char** expected, int argc){
     assert(cmd->type == cmdtype_exec);
     
     struct cmd_exec* ecmd = (struct cmd_exec*)cmd;
-    assert(ecmd->argc == argc);
+    
+    if (ecmd->argc != argc) {
+        printf("cmd argc <%d> exp argc <%d>\n", ecmd->argc, argc);
+        exit(-1);
+    }
 
     for (int i = 0; i < ecmd->argc; i ++) {
         if (! equal_string(ecmd->argv[i], expected[i])){
@@ -25,7 +29,7 @@ diff_ecmd(struct cmd* cmd, char** expected, int argc){
 
 void 
 test1() {
-    char buf[20] = "ls|grep 123" ;
+    char buf[] = "ls|grep 123" ;
 
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
@@ -37,13 +41,14 @@ test1() {
     diff_ecmd(pcmd->left, expected1, length(expected1));
     diff_ecmd(pcmd->right, expected2, length(expected2));
     
+    printf("%s success\n", __FUNCTION__);
     return;
 }
 
 
 void 
 test2() {
-    char buf[20] = "ls|grep \"123\"" ;
+    char buf[] = "ls|grep \"123\"" ;
 
     char* expected1[] = {"ls"};
     char* expected2[] = {"grep", "123"};
@@ -55,11 +60,34 @@ test2() {
     diff_ecmd(pcmd->left, expected1, length(expected1));
     diff_ecmd(pcmd->right, expected2, length(expected2));
     
+    printf("%s success\n", __FUNCTION__);
+    return;
+}
+
+void 
+test3() {
+    char buf[] = "ls . ; grep 123" ;
+
+    char* expected1[] = {"ls", "."};
+    char* expected2[] = {"grep", "123"};
+    
+    struct cmd* cmd = cmd_parse(buf);
+    assert(cmd->type == cmdtype_list);
+   
+    struct cmd_list* lcmd = (struct cmd_list*) cmd;
+    diff_ecmd(lcmd->left, expected1, length(expected1));
+    // diff_ecmd(lcmd->right, expected2, length(expected2));
+    
+    printf("%s success\n", __FUNCTION__);
     return;
 }
 
 int 
 main(int argc, char const *argv[]) {
-    // test2();    
+    printf("%s\n", __FILE__);
+    test1();    
+    test2();    
+    test3();    
+    printf("\n");
     return 0;
 }

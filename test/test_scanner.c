@@ -86,11 +86,30 @@ test3() {
     return;
 }
 
+void 
+test4() {
+    //                      11111
+    //            012345678901234  
+    char buf[] = "ls . ; grep 123" ;
+    scannerInit(buf);
+
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, buf, 2});
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, &(buf[3]), 1});
+    equalToken(scannerGetToken(), (Token){TokenTypeSemicolon, &(buf[5]), 1});
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, &(buf[7]), 4});
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, &(buf[12]), 3});
+    equalToken(scannerGetToken(), (Token){TokenTypeEOF, buf+strlen(buf), 0});
+
+    printf("%s success\n", __FUNCTION__);
+}
+
 int 
 main(int argc, char const *argv[]) {
     printf("%s\n", __FILE__);
     test1();    
     test2();    
     test3();    
+    test4();
+    printf("\n");
     return 0;
 }

@@ -18,16 +18,16 @@ run: main
 main:$(FILES)
 	$(CC) $(FILES) -I ./src $(CFLAGS) -o $(HCC)
 
-
-# test
+# 拿到test目录下的所有文件
 TEST = $(wildcard $(SRC)/test/*.c)
+# 去除所有文件的后缀名字
 TARGETS = $(patsubst %.c, %, $(TEST))  
 
-test:$(TARGETS) 
-	$(TARGETS)
-
 $(TARGETS):%:%.c $(SRC_FILES) 
-	$(CC) $< $(SRC_FILES) -I ./src $(CFLAGS) -o $@ 
+	@$(CC) $< $(SRC_FILES) -I ./src $(CFLAGS) -o $@
+
+test:$(TARGETS) 
+	@sh -c 'for file in $(TARGETS);do $$file ;done;'
 
 .PHONY:run main clean test
 

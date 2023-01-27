@@ -31,6 +31,7 @@ struct cmd_redir {
     cmdtype type;
     struct cmd* cmd;
     char* file;
+    char* efile;
     int mode;
     int fd;
 };
@@ -63,8 +64,7 @@ void print_diff_exit(struct cmd* cmd, char** expected, int argc);
 bool equal_string(char* s, char* d);
 
 /* ======== parse ===== */
-struct cmd* parse_line();
-struct cmd* parse_pipe();
-struct cmd* parse_exec();
+struct cmd* cmd_parse(char* buf);
+void freeObjects();
 
 #endif
