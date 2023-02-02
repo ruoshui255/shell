@@ -12,8 +12,8 @@ FILES = $(wildcard $(SRC)/src/*.c)
 OUT_FILE = $(SRC)/src/main.c
 SRC_FILES = $(filter-out $(OUT_FILE), $(FILES))
 
-run: main
-	./$(HCC)
+# run: main
+# 	./$(HCC)
 
 main:$(FILES)
 	$(CC) $(FILES) -I ./src $(CFLAGS) -o $(HCC)
