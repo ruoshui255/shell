@@ -103,6 +103,22 @@ test4() {
     printf("%s success\n", __FUNCTION__);
 }
 
+void 
+test5() {
+    //                      11111
+    //            012345678901234  
+    char buf[] = "ls . >> t" ;
+    scannerInit(buf);
+
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, buf, 2});
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, &(buf[3]), 1});
+    equalToken(scannerGetToken(), (Token){TokenTypeRedirectionWriteAppend, &(buf[5]), 2});
+    equalToken(scannerGetToken(), (Token){TokenTypeArg, &(buf[8]), 1});
+    equalToken(scannerGetToken(), (Token){TokenTypeEOF, buf+strlen(buf), 0});
+
+    printf("%s success\n", __FUNCTION__);
+}
+
 int 
 main(int argc, char const *argv[]) {
     printf("%s\n", __FILE__);
@@ -110,6 +126,7 @@ main(int argc, char const *argv[]) {
     test2();    
     test3();    
     test4();
+    test5();
     printf("\n");
     return 0;
 }

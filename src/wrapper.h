@@ -24,4 +24,6 @@ void wrapperExecvp(const char *file, char *const argv[]);
 int wrapperKill(pid_t pid, int sig);
 void *wrapperMalloc(size_t size);
 handler_t *wrapperSignal(int signum, handler_t *handler);
+void Sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+void Sigaddset(sigset_t *set, int signum);
 #endif

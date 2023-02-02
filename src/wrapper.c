@@ -106,6 +106,27 @@ wrapperSignal(int signum, handler_t *handler) {
     sigemptyset(&action.sa_mask); /* block sigs of type being handled */
     action.sa_flags = SA_RESTART; /* restart syscalls if possible */
 
-    if (sigaction(signum, &action, &old_action) < 0) unixError("Signal error");
+    if (sigaction(signum, &action, &old_action) < 0) {
+        unixError("Signal error");
+    }
+
     return (old_action.sa_handler);
+}
+
+void 
+Sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+    if (sigprocmask(how, set, oldset) < 0) {
+        unixError("Sigprocmask error");
+    }
+    
+    return;
+}
+
+void 
+Sigaddset(sigset_t *set, int signum) {
+    if (sigaddset(set, signum) < 0) {
+        unixError("Sigaddset error");
+    }
+    
+    return;
 }

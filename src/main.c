@@ -10,24 +10,19 @@
 
 
 static int
-getcmd(char *buf, int nbuf) {
+getCmd(char *buf, int nbuf) {
     log_info("$ ");
     fflush(stderr);
-    memset(buf, 0, nbuf);
     
-    fgets(buf, nbuf, stdin);
-    // when EOF, it doesn't change the buf(initialization)
-    // so buf[0] is zero
-    if(buf[0] == 0){ // EOF
+    if(fgets(buf, nbuf, stdin) == NULL){
         return -1;
     }
-    
     return 0;
 }
 
 // Execute cmd.  Never returns.
 static void
-run_cmd(struct Cmd *cmd) {
+runCmd(struct Cmd *cmd) {
     int p[2];
     struct CmdBack *bcmd;
     struct CmdExec *ecmd;
@@ -53,14 +48,14 @@ run_cmd(struct Cmd *cmd) {
             rcmd = (struct CmdRedir *)cmd;
             wrapperClose(rcmd->fd);
             wrapperOpen(rcmd->file, rcmd->mode);
-            run_cmd(rcmd->cmd);
+            runCmd(rcmd->cmd);
             break;
         case CmdTypeList:
             lcmd = (struct CmdList *)cmd;
             if (wrapperFork() == 0)
-                run_cmd(lcmd->left);
+                runCmd(lcmd->left);
             wrapperWait(0);
-            run_cmd(lcmd->right);
+            runCmd(lcmd->right);
             break;
         case CmdTypePipe:
             pcmd = (struct CmdPipe *)cmd;
@@ -72,7 +67,7 @@ run_cmd(struct Cmd *cmd) {
                 wrapperDup(p[1]);
                 wrapperClose(p[0]);
                 wrapperClose(p[1]);
-                run_cmd(pcmd->left);
+                runCmd(pcmd->left);
             }
 
             if (wrapperFork() == 0) {
@@ -80,7 +75,7 @@ run_cmd(struct Cmd *cmd) {
                 wrapperDup(p[0]);
                 wrapperClose(p[0]);
                 wrapperClose(p[1]);
-                run_cmd(pcmd->right);
+                runCmd(pcmd->right);
             }
             wrapperClose(p[0]);
             wrapperClose(p[1]);
@@ -89,18 +84,18 @@ run_cmd(struct Cmd *cmd) {
             break;
         case CmdTypeBack:
             bcmd = (struct CmdBack *)cmd;
-            run_cmd(bcmd->cmd);
+            runCmd(bcmd->cmd);
             break;
         case CmdTypeAnd:
             acmd = (struct CmdAnd*)cmd;
             if (wrapperFork() == 0) {
-                run_cmd(acmd->left);
+                runCmd(acmd->left);
             }
 
             int wstatus;
             wrapperWait(&wstatus);
             if (WIFEXITED(wstatus) && (WEXITSTATUS(wstatus) == 0)) {
-                run_cmd(acmd->right);
+                runCmd(acmd->right);
             }
         }
     exit(0);
@@ -121,10 +116,10 @@ main(int argc, char const *argv[]) {
   // Ensure that three file descriptors are Open.
 
   // Read and run input commands.
-    while((getcmd(buf, sizeof(buf))) >= 0){
+    while((getCmd(buf, sizeof(buf))) >= 0){
         struct Cmd* cmd = cmdParse(buf);
         if (cmd == NULL) {
-            printf("cmd null\n");
+            // printf("cmd null\n");
             continue;
         }
 
@@ -141,21 +136,21 @@ main(int argc, char const *argv[]) {
 
         // fork and execute
         sigset_t mask, prev;
-        sigaddset(&mask, SIGCHLD);
-        sigprocmask(SIG_BLOCK, &mask, &prev);  
+        Sigaddset(&mask, SIGCHLD);
+        Sigprocmask(SIG_BLOCK, &mask, &prev);  
 
         pid_t pid = wrapperFork();
         if(pid == 0) {
-            sigprocmask(SIG_SETMASK, &prev , NULL);
+            Sigprocmask(SIG_SETMASK, &prev , NULL);
             setpgid(0, 0);        
 
-            run_cmd(cmd);
+            runCmd(cmd);
             exit(-1);
         }
 
         JobState state = cmd->type == CmdTypeBack? JobStateBG : JobStateFG;
         jobAdd(pid, state, buf);
-        sigprocmask(SIG_SETMASK, &prev , NULL);
+        Sigprocmask(SIG_SETMASK, &prev , NULL);
         
         if (state == JobStateBG) {
             log_info("bg (%d) %s\n", pid, buf);

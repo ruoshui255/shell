@@ -68,6 +68,7 @@ allocateMemCmdRedir(struct Cmd* subcmd, char* file, char* efile, int mode, int f
     cmd->efile = efile;
     cmd->mode = mode;
     cmd->fd = fd;
+    
     return (struct Cmd*)cmd; 
 }
 
@@ -197,8 +198,11 @@ parseBlock() {
 struct Cmd*
 parseExec() {
     struct CmdExec* ecmd;
+    // 可能有文件重定向, 需要另起变量保存
+    struct Cmd* cmd;
 
     ecmd = (struct CmdExec*)allocateMemCmdExec();
+    cmd = (struct Cmd*)ecmd;
     
     if (match(TokenTypeLeftParen)) {
         return parseBlock();
@@ -211,14 +215,15 @@ parseExec() {
         ecmd->argv[argc] = token.start;
         ecmd->eargv[argc] = token.start + token.length;
         argc++;
-
-        ecmd = (struct CmdExec*)(parseRedirs((struct Cmd*)ecmd));
+       
+        cmd = (parseRedirs((struct Cmd*)ecmd));
     }
 
     ecmd->argv[argc] = NULL;
     ecmd->argc = argc;
 
-    return (struct Cmd*)ecmd;
+
+    return cmd;
 }
 
 struct Cmd*
@@ -229,6 +234,10 @@ parsePipe() {
         cmd = allocateMemCmdPipe(cmd, parsePipe());
     }
 
+    // if (match(TokenTypeBackTask)) {
+    //     cmd = allocateMemCmdBack(cmd);
+    // }
+
     return cmd;
 }
 
@@ -236,6 +245,7 @@ static struct Cmd*
 parse() {
     struct Cmd* cmd;
     cmd = parsePipe();
+
     if (match(TokenTypeBackTask)) {
         cmd = allocateMemCmdBack(cmd);
     }
@@ -276,13 +286,13 @@ NullTerminate(struct Cmd* cmd) {
         case CmdTypeExec:
             ecmd = (struct CmdExec*)cmd;
             for (i = 0; ecmd->argv[i]; i++){
-                *ecmd->eargv[i] = '\0';
+                *(ecmd->eargv[i]) = '\0';
             }
             break;
         case CmdTypeRedir:
             rcmd = (struct CmdRedir*)cmd;
             NullTerminate(rcmd->cmd);
-            *rcmd->efile = '\0';
+            *(rcmd->efile) = '\0';
             break;
         case CmdTypePipe:
             pcmd = (struct CmdPipe*)cmd;

@@ -32,5 +32,6 @@ typedef struct {
 /* ======== scannner ===== */
 void scannerInit(char command[]);
 Token scannerGetToken();
+bool scannerAtEnd();
 
 #endif
