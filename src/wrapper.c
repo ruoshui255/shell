@@ -24,7 +24,6 @@ wrapperFork() {
     return pid;
 }
 
-
 int 
 wrapperDup(int fd){
     int state = dup(fd);
@@ -34,7 +33,6 @@ wrapperDup(int fd){
 
     return 0;
 }
-
 
 void
 wrapperClose(int fd) {

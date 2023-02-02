@@ -135,7 +135,7 @@ errorToken(char *msg){
 
 static bool
 Argument(char c) {
-    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '.' || c == '/' || c =='-';
+    bool alpha = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '.' || c == '/' || c =='-' || c == '%';
 
     bool digit = '0' <= c && c <= '9';
 

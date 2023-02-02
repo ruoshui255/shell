@@ -69,11 +69,20 @@ jobDeleteByPid(pid_t pid) {
         }
     }
 }
-
 static struct job_t*
 jobGetByPid(pid_t pid){
     for (int i = 0; i < MaxJobs; i++) {
         if (jobs[i].pid == pid) {
+            return &(jobs[i]);
+        }
+    }
+    return NULL;
+}
+
+static struct job_t*
+jobGetByJobId(int jobId){
+    for (int i = 0; i < MaxJobs; i++) {
+        if (jobs[i].jid == jobId) {
             return &(jobs[i]);
         }
     }
@@ -161,14 +170,14 @@ do_bg(char* args[]) {
         return 0;
     }
 
-    int pid = atoi(&(args[1][1]));
-    if (pid == 0) {
+    int jobId = atoi(&(args[1][1]));
+    if (jobId == 0) {
         log_info("Usage:bg %%job_id\n");
     }
     
-    struct job_t* p = jobGetByPid(pid);
+    struct job_t* p = jobGetByJobId(jobId);
     if (p == NULL || p->state == JobStateUndefine) {
-        log_info("(%d): No such process\n", pid);
+        log_info("(%d): No such process\n", jobId);
         return 0;
     }
     
@@ -210,21 +219,21 @@ do_fg(char* args[]) {
         return 0;
     }
 
-    int pid = atoi(&(args[1][1]));
-    if (pid == 0) {
+    int jobId = atoi(&(args[1][1]));
+    if (jobId == 0) {
         log_info("Usage:fg %%job_id\n");
     }
     
-    struct job_t* p = jobGetByPid(pid);
+    struct job_t* p = jobGetByJobId(jobId);
     if (p == NULL || p->state == JobStateUndefine) {
-        log_info("(%d): No such process\n", pid);
+        log_info("(%d): No such process\n", jobId);
         return 0;
     }
     
     log_info("[%d] (%d) %s\n", p->jid, p->pid, p->cmdline);
     p->state = JobStateFG;
     wrapperKill(-p->pid, SIGCONT);
-    waitFG(pid);    
+    waitFG(jobId);    
     return 0;
 }
 
@@ -254,7 +263,7 @@ handlerSigChild(int sig) {
     while((child_pid = waitpid(-1, &wstatus, WNOHANG | WUNTRACED)) > 0){
         if (WIFEXITED(wstatus)) {
             // normally exit
-            log_info("normally exit: delete job\n");
+            log_info("\nchild (%d) normally exit\n", child_pid);
             jobDeleteByPid(child_pid);
         } else if (WIFSTOPPED(wstatus)) {
             // stop

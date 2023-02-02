@@ -66,10 +66,10 @@ struct CmdAnd {
 
 /* ======== utils ===== */
 void panic(char* msg);
-void print_arr(char* prefix, char* array[], int argc);
-void print_cmd(struct Cmd* cmd);
-void print_diff_exit(struct Cmd* cmd, char** expected, int argc);
-bool equal_string(char* s, char* d);
+// void print_arr(char* prefix, char* array[], int argc);
+// void print_cmd(struct Cmd* cmd);
+// void print_diff_exit(struct Cmd* cmd, char** expected, int argc);
+// bool equal_string(char* s, char* d);
 
 /* ======== parse ===== */
 struct Cmd* cmdParse(char* buf);

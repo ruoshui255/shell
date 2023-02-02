@@ -54,7 +54,7 @@ runCmd(struct Cmd *cmd) {
             lcmd = (struct CmdList *)cmd;
             if (wrapperFork() == 0)
                 runCmd(lcmd->left);
-            wrapperWait(0);
+            // wrapperWait(0);
             runCmd(lcmd->right);
             break;
         case CmdTypePipe:
