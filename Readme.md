@@ -1,7 +1,6 @@
 # 基于 C 的自制shell 程序
 
-解析用户输入的命令，将其转化成命令参数执行
-
+- 解析用户输入的命令，将其转化成命令参数执行
 - API：fork、execve、wait、signal、dup .etc
 
 ## 使用方法
